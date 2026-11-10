@@ -51,14 +51,18 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 // TODO: const askBtn = ...
 // TODO: const guideResponseEl = ...
 // TODO: askBtn.addEventListener(...)
+const questionInput = document.getElementById("questionInput");
+const askBtn = document.getElementById("askBtn");
+const guideResponseEl = document.getElementById("guideResponse");
 
+askBtn.addEventListener('click', askFieldGuide);
 
 /* ============================================================
    STEP 2 (part 1): Create a variable to remember the country.
    Start it as null (nothing explored yet).
    ============================================================ */
 // TODO: let currentCountry = ...
-
+let currentCountry = "";
 
 // --- Part 1: connect the Explore button (already done) --------
 searchBtn.addEventListener("click", fetchCountry);
@@ -70,7 +74,7 @@ async function fetchCountry() {
   showLoading();
 
   try {
-    const API_KEY = ""; // REST Countries v5 key (same as Part 1)
+    const API_KEY = "rc_live_ed13d38a8065498380c559ddcfb9302c"; // REST Countries v5 key (same as Part 1)
     const url =
       `https://api.restcountries.com/countries/v5?q=${encodeURIComponent(countryName)}` +
       `&response_fields=names.common,capitals,region,population,languages,flag.url_png,flag.description`;
@@ -113,7 +117,9 @@ async function fetchCountry() {
        3. Remove the "hidden" class from fieldGuideEl
        ---------------------------------------------------------- */
     // TODO
-
+    currentCountry = country;
+    fieldGuideEl.classList.remove("hidden");
+    guideCountryNameEl.textContent = country.names.common;
 
   } catch (error) {
     hideLoading();
@@ -136,8 +142,17 @@ async function fetchCountry() {
      and return
    ============================================================ */
 async function askFieldGuide() {
+  askBtn.disabled = true;
   // TODO: read and validate the question
-
+  const question = questionInput.value.trim();
+  if (!currentCountry) { 
+    guideResponseEl.textContent = "Explore a country first, then ask your question."; 
+    return; 
+  } 
+  
+  if (!question) { guideResponseEl.textContent = "Type a question first."; 
+    return; 
+  }
 
   /* ----------------------------------------------------------
      STEP 4: Build the messages array.
@@ -147,7 +162,10 @@ async function askFieldGuide() {
        - role "user"   -> the visitor's question
      ---------------------------------------------------------- */
   // TODO: const messages = [ ... ];
-
+  const messages = [ 
+    { role: "system", content: buildSystemPrompt(currentCountry) }, 
+    { role: "user", content: question }, 
+  ];
 
   /* ----------------------------------------------------------
      STEP 5: Send the POST request, parse, and display.
@@ -168,8 +186,27 @@ async function askFieldGuide() {
      - Put that text into guideResponseEl.textContent
      ---------------------------------------------------------- */
   // TODO
+  try { 
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+       },
+       body: JSON.stringify({ model: "gpt-4o", messages: messages }),
+    });
 
+    const data = await response.json();
+    console.log(data.choices[0].message.content);
+    const reply = data.choices[0].message.content;
+    guideResponseEl.textContent = reply;
+    questionInput.value = "";
 
+  } catch (err) {
+     throw new Error("Failed to fetch response from OpenAI API");
+  } finally { 
+    console.log('All done!');
+  }
   /* ----------------------------------------------------------
      STEP 6: Make it reliable.
      ----------------------------------------------------------
