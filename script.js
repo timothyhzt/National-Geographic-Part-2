@@ -201,7 +201,7 @@ async function askFieldGuide() {
     const reply = data.choices[0].message.content;
     guideResponseEl.textContent = reply;
     questionInput.value = "";
-
+   
   } catch (err) {
      throw new Error("Failed to fetch response from OpenAI API");
   } finally { 
